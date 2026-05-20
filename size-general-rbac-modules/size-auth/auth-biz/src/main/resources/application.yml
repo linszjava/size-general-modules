@@ -1,0 +1,23 @@
+server:
+  port: 9501
+
+spring:
+  application:
+    name: size-auth
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yml
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+
+sa-token:
+  token-name: Authorization
+  timeout: 86400
+  is-read-header: true
+  is-read-cookie: false
