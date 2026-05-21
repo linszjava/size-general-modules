@@ -42,7 +42,7 @@ async function handleLogin() {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch {
-    message.error('登录失败')
+    // 错误提示已由 request 拦截器根据服务端 message 展示，此处不再重复弹窗
   } finally {
     loading.value = false
   }

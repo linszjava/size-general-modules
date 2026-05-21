@@ -10,9 +10,12 @@ import com.size.common.core.result.ResultCode;
 import com.size.rbac.api.RbacUserApi;
 import com.size.rbac.api.dto.AuthInfoDTO;
 import com.size.rbac.api.dto.UserDTO;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.function.Supplier;
 
 /**
  * 认证服务实现
@@ -22,41 +25,25 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
 
     private static final String SESSION_AUTH_INFO = "authInfo";
+    private static final String LOGIN_FAIL_MSG = "用户名或密码错误";
 
     private final RbacUserApi rbacUserApi;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
     public LoginVO login(LoginRequest request) {
-        R<UserDTO> userResult = rbacUserApi.getByUsername(request.getUsername());
-        if (userResult == null || userResult.getData() == null) {
-            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
-        }
-        if (userResult.getCode() == ResultCode.FAIL.getCode()) {
-            throw new BizException(ResultCode.FAIL.getCode(), "权限服务异常，请检查数据库是否已初始化");
-        }
-        if (userResult.getCode() != ResultCode.SUCCESS.getCode()) {
-            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
-        }
-        UserDTO user = userResult.getData();
-
-        if (user.getStatus() != null && user.getStatus() != 0) {
-            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "账号已停用");
-        }
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
-        }
-
-        R<AuthInfoDTO> authInfoResult = rbacUserApi.getAuthInfo(user.getId());
-        if (authInfoResult == null
-                || authInfoResult.getCode() != ResultCode.SUCCESS.getCode()
-                || authInfoResult.getData() == null) {
-            throw new BizException("获取用户权限信息失败");
-        }
+        UserDTO user = requireFeignData(
+                () -> rbacUserApi.getByUsername(request.getUsername()),
+                ResultCode.UNAUTHORIZED.getCode(),
+                LOGIN_FAIL_MSG);
+        verifyLoginCredential(user, request.getPassword());
+        AuthInfoDTO authInfo = requireFeignData(
+                () -> rbacUserApi.getAuthInfo(user.getId()),
+                ResultCode.FAIL.getCode(),
+                "获取用户权限信息失败");
 
         StpUtil.login(user.getId());
-        StpUtil.getSession().set(SESSION_AUTH_INFO, authInfoResult.getData());
-
+        StpUtil.getSession().set(SESSION_AUTH_INFO, authInfo);
         return new LoginVO(StpUtil.getTokenValue());
     }
 
@@ -67,14 +54,10 @@ public class AuthServiceImpl implements AuthService {
         if (cached != null) {
             return cached;
         }
-        Long userId = StpUtil.getLoginIdAsLong();
-        R<AuthInfoDTO> authInfoResult = rbacUserApi.getAuthInfo(userId);
-        if (authInfoResult == null
-                || authInfoResult.getCode() != ResultCode.SUCCESS.getCode()
-                || authInfoResult.getData() == null) {
-            throw new BizException(ResultCode.UNAUTHORIZED);
-        }
-        AuthInfoDTO authInfo = authInfoResult.getData();
+        AuthInfoDTO authInfo = requireFeignData(
+                () -> rbacUserApi.getAuthInfo(StpUtil.getLoginIdAsLong()),
+                ResultCode.UNAUTHORIZED.getCode(),
+                ResultCode.UNAUTHORIZED.getMessage());
         StpUtil.getSession().set(SESSION_AUTH_INFO, authInfo);
         return authInfo;
     }
@@ -83,6 +66,23 @@ public class AuthServiceImpl implements AuthService {
     public void logout() {
         if (StpUtil.isLogin()) {
             StpUtil.logout();
+        }
+    }
+
+    private void verifyLoginCredential(UserDTO user, String rawPassword) {
+        if (user.getStatus() != null && user.getStatus() != 0) {
+            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "账号已停用");
+        }
+        if (user.getPassword() == null || !passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), LOGIN_FAIL_MSG);
+        }
+    }
+
+    private <T> T requireFeignData(Supplier<R<T>> supplier, int errorCode, String errorMessage) {
+        try {
+            return R.requireData(supplier.get(), errorCode, errorMessage);
+        } catch (FeignException e) {
+            throw new BizException(e.status(), errorMessage);
         }
     }
 }

@@ -21,6 +21,7 @@ spring:
       discovery:
         locator:
           enabled: true
+          lower-case-service-id: true
       routes:
         - id: size-auth
           uri: lb://size-auth
@@ -46,3 +47,28 @@ sa-token:
   timeout: 86400
   is-read-header: true
   is-read-cookie: false
+
+# Knife4j 网关聚合（统一入口 http://localhost:9500/doc.html）
+knife4j:
+  gateway:
+    enabled: true
+    strategy: manual
+    tags-sorter: order
+    operations-sorter: order
+    routes:
+      - name: 认证服务
+        service-name: size-auth
+        # 经网关 discovery locator 转发：/size-auth/** -> 下游 /v3/api-docs
+        url: /size-auth/v3/api-docs
+        context-path: /api
+        order: 1
+      - name: RBAC服务
+        service-name: size-rbac
+        url: /size-rbac/v3/api-docs
+        context-path: /api
+        order: 2
+      - name: 系统服务
+        service-name: size-system
+        url: /size-system/v3/api-docs
+        context-path: /api
+        order: 3

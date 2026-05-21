@@ -73,6 +73,15 @@ npm run dev
 
 访问 http://localhost:5173
 
+### 5. API 文档（Knife4j 网关聚合）
+
+重启 **size-gateway** 后访问：
+
+- 聚合文档 UI：http://localhost:9500/doc.html
+- 各服务仍可直接访问：http://localhost:9501/doc.html（auth）、9502（rbac）、9503（system）
+
+生产环境请在网关配置 `knife4j.gateway.enabled: false` 关闭文档入口。
+
 ### 4. 默认账号
 
 | 用户名 | 密码 | 角色 |

@@ -3,8 +3,10 @@ package com.size.common.satoken.handler;
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
 import cn.dev33.satoken.exception.NotRoleException;
+import com.size.common.core.result.HttpStatusMapper;
 import com.size.common.core.result.R;
 import com.size.common.core.result.ResultCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -15,23 +17,23 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class SaTokenExceptionHandler {
 
     @ExceptionHandler(NotLoginException.class)
-    public R<Void> handleNotLogin(NotLoginException e) {
-        R<Void> r = R.fail(ResultCode.UNAUTHORIZED.getMessage());
-        r.setCode(ResultCode.UNAUTHORIZED.getCode());
-        return r;
+    public ResponseEntity<R<Void>> handleNotLogin(NotLoginException e) {
+        return errorResponse(ResultCode.UNAUTHORIZED);
     }
 
     @ExceptionHandler(NotPermissionException.class)
-    public R<Void> handleNotPermission(NotPermissionException e) {
-        R<Void> r = R.fail(ResultCode.FORBIDDEN.getMessage());
-        r.setCode(ResultCode.FORBIDDEN.getCode());
-        return r;
+    public ResponseEntity<R<Void>> handleNotPermission(NotPermissionException e) {
+        return errorResponse(ResultCode.FORBIDDEN);
     }
 
     @ExceptionHandler(NotRoleException.class)
-    public R<Void> handleNotRole(NotRoleException e) {
-        R<Void> r = R.fail(ResultCode.FORBIDDEN.getMessage());
-        r.setCode(ResultCode.FORBIDDEN.getCode());
-        return r;
+    public ResponseEntity<R<Void>> handleNotRole(NotRoleException e) {
+        return errorResponse(ResultCode.FORBIDDEN);
+    }
+
+    private static ResponseEntity<R<Void>> errorResponse(ResultCode resultCode) {
+        R<Void> body = R.fail(resultCode.getMessage());
+        body.setCode(resultCode.getCode());
+        return ResponseEntity.status(HttpStatusMapper.fromBizCode(resultCode.getCode())).body(body);
     }
 }
