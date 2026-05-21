@@ -21,6 +21,7 @@ public class GlobalExceptionHandler {
         return r;
     }
 
+
     @ExceptionHandler(Exception.class)
     public R<Void> handleException(Exception e) {
         log.error("系统异常", e);

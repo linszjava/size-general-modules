@@ -23,7 +23,7 @@ export function setupRouterGuard(router: Router) {
           dynamicRoutes.forEach((route) => router.addRoute(route))
           next({ ...to, replace: true })
         } catch {
-          userStore.logout()
+          await userStore.logout()
           next(`/login?redirect=${to.path}`)
         }
         return

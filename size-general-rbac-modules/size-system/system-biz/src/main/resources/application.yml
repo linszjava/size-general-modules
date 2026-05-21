@@ -11,11 +11,13 @@ spring:
       config:
         server-addr: 127.0.0.1:8848
         file-extension: yml
+        import-check:
+          enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/size_rbac?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
-    password: root
+    password: linsz99@
   data:
     redis:
       host: 127.0.0.1

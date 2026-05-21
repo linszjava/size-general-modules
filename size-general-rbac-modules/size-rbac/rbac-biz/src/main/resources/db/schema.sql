@@ -1,18 +1,5 @@
--- =============================================
--- rbac-service 权限服务 SQL
--- 数据库: size_rbac
---
--- 使用方式:
---   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS size_rbac DEFAULT CHARSET utf8mb4;"
---   mysql -u root -p size_rbac < sql/rbac.sql
---
--- 默认账号: admin / admin123
--- =============================================
+-- 表结构（需先创建数据库 size_rbac，JDBC URL 已指向该库）
 
-CREATE DATABASE IF NOT EXISTS size_rbac DEFAULT CHARSET utf8mb4;
-USE size_rbac;
-
--- 部门表
 CREATE TABLE IF NOT EXISTS sys_dept (
     id          BIGINT       NOT NULL COMMENT '主键',
     parent_id   BIGINT       DEFAULT 0 COMMENT '父部门ID',
@@ -28,7 +15,6 @@ CREATE TABLE IF NOT EXISTS sys_dept (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='部门表';
 
--- 用户表
 CREATE TABLE IF NOT EXISTS sys_user (
     id          BIGINT       NOT NULL COMMENT '主键',
     username    VARCHAR(64)  NOT NULL COMMENT '用户名',
@@ -47,7 +33,6 @@ CREATE TABLE IF NOT EXISTS sys_user (
     UNIQUE KEY uk_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
--- 角色表
 CREATE TABLE IF NOT EXISTS sys_role (
     id          BIGINT       NOT NULL COMMENT '主键',
     role_name   VARCHAR(64)  NOT NULL COMMENT '角色名称',
@@ -62,7 +47,6 @@ CREATE TABLE IF NOT EXISTS sys_role (
     UNIQUE KEY uk_role_key (role_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
 
--- 菜单表
 CREATE TABLE IF NOT EXISTS sys_menu (
     id          BIGINT       NOT NULL COMMENT '主键',
     parent_id   BIGINT       DEFAULT 0 COMMENT '父菜单ID',
@@ -81,7 +65,6 @@ CREATE TABLE IF NOT EXISTS sys_menu (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜单表';
 
--- 权限表（API 级别）
 CREATE TABLE IF NOT EXISTS sys_permission (
     id              BIGINT       NOT NULL COMMENT '主键',
     permission_name VARCHAR(64)  NOT NULL COMMENT '权限名称',
@@ -94,55 +77,20 @@ CREATE TABLE IF NOT EXISTS sys_permission (
     UNIQUE KEY uk_permission_key (permission_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限表';
 
--- 用户-角色关联表
 CREATE TABLE IF NOT EXISTS sys_user_role (
     user_id BIGINT NOT NULL COMMENT '用户ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     PRIMARY KEY (user_id, role_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户角色关联表';
 
--- 角色-菜单关联表
 CREATE TABLE IF NOT EXISTS sys_role_menu (
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
     PRIMARY KEY (role_id, menu_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色菜单关联表';
 
--- 角色-权限关联表
 CREATE TABLE IF NOT EXISTS sys_role_permission (
     role_id       BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
     PRIMARY KEY (role_id, permission_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限关联表';
-
--- =============================================
--- 初始化数据
--- =============================================
-
--- 超级管理员角色
-INSERT IGNORE INTO sys_role (id, role_name, role_key, sort, status, deleted, remark) VALUES
-(1, '超级管理员', 'super_admin', 1, 0, 0, '拥有所有权限');
-
--- 默认管理员用户 (密码: admin123, BCrypt加密，已校验)
-INSERT IGNORE INTO sys_user (id, username, password, nickname, status, deleted, dept_id) VALUES
-(1, 'admin', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '管理员', 0, 0, NULL);
-
--- 用户-角色关联
-INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1);
-
--- 默认菜单
-INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, permission, icon, sort, deleted, status, visible) VALUES
-(1,  0, '系统管理', 0, '/system',     NULL,                    NULL,                  'SettingOutlined', 1, 0, 0, 0),
-(2,  1, '用户管理', 1, '/system/user', 'system/user/index',     'system:user:list',    'UserOutlined',    1, 0, 0, 0),
-(3,  1, '角色管理', 1, '/system/role', 'system/role/index',     'system:role:list',    'TeamOutlined',    2, 0, 0, 0),
-(4,  1, '菜单管理', 1, '/system/menu', 'system/menu/index',     'system:menu:list',    'MenuOutlined',    3, 0, 0, 0),
-(5,  1, '部门管理', 1, '/system/dept', 'system/dept/index',     'system:dept:list',    'ApartmentOutlined', 4, 0, 0, 0),
-(10, 2, '新增用户', 2, NULL,           NULL,                    'system:user:add',     NULL, 1, 0, 0, 0),
-(11, 2, '编辑用户', 2, NULL,           NULL,                    'system:user:edit',    NULL, 2, 0, 0, 0),
-(12, 2, '删除用户', 2, NULL,           NULL,                    'system:user:delete',  NULL, 3, 0, 0, 0);
-
--- 超级管理员拥有所有菜单
-INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
-(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 10), (1, 11), (1, 12);
-
--- 验证: SELECT id, username, status, deleted FROM sys_user WHERE username='admin';

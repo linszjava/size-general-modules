@@ -28,11 +28,14 @@
 ### 1. 启动基础设施
 
 ```bash
-# 启动 MySQL，创建数据库
+# 启动 MySQL，创建数据库（密码按本机实际填写）
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS size_rbac DEFAULT CHARSET utf8mb4;"
 
-# 导入 SQL（按顺序）
+# 导入 SQL（按顺序，含默认账号 admin / admin123）
 mysql -u root -p size_rbac < size-general-rbac-modules/sql/rbac.sql
+
+# 若 MySQL 密码不是 root，启动 rbac 前设置环境变量：
+# export MYSQL_PASSWORD=你的密码
 mysql -u root -p size_rbac < size-general-rbac-modules/sql/auth.sql
 mysql -u root -p size_rbac < size-general-rbac-modules/sql/system.sql
 

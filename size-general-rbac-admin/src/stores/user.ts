@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getToken, setToken, removeToken } from '@/utils/auth'
+import { loginApi, getUserInfoApi, logoutApi } from '@/api/auth'
 import type { MenuItem, UserInfo } from '@/types/api'
 
 export const useUserStore = defineStore('user', () => {
@@ -9,21 +10,39 @@ export const useUserStore = defineStore('user', () => {
   const menus = ref<MenuItem[]>([])
   const permissions = ref<string[]>([])
 
-  async function login(_username: string, _password: string) {
-    // TODO: 对接 auth-service 登录接口
-    const mockToken = 'mock-token'
-    setToken(mockToken)
-    token.value = mockToken
+  async function login(username: string, password: string) {
+    const res = await loginApi({ username, password })
+    const accessToken = res.data.data?.token
+    if (!accessToken) {
+      throw new Error('登录失败：未获取到 Token')
+    }
+    setToken(accessToken)
+    token.value = accessToken
+    await fetchUserInfo()
   }
 
   async function fetchUserInfo() {
-    // TODO: 对接 auth-service 用户信息接口
-    userInfo.value = { id: 1, username: 'admin', nickname: '管理员' }
-    menus.value = []
-    permissions.value = ['system:user:list']
+    const res = await getUserInfoApi()
+    const data = res.data.data
+    if (!data) {
+      throw new Error('获取用户信息失败')
+    }
+    userInfo.value = {
+      id: data.user.id,
+      username: data.user.username,
+      nickname: data.user.nickname,
+      avatar: data.user.avatar,
+    }
+    menus.value = data.menus as MenuItem[]
+    permissions.value = data.permissions
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await logoutApi()
+    } catch {
+      // 忽略登出接口异常，仍清理本地状态
+    }
     removeToken()
     token.value = null
     userInfo.value = null
